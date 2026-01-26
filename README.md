@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/tevonsb-homeassistant-mcp-badge.png)](https://mseep.ai/app/tevonsb-homeassistant-mcp)
+
 # Model Context Protocol Server for Home Assistant
 
 The server uses the MCP protocol to share access to a local Home Assistant instance with an LLM application.
