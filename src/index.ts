@@ -26,6 +26,7 @@ import { DomainSchema } from './schemas.js';
 const HASS_HOST = process.env.HASS_HOST || 'http://192.168.178.63:8123';
 const HASS_TOKEN = process.env.HASS_TOKEN;
 const PORT = process.env.PORT || 3000;
+const DISABLE_HTTP_SERVER = process.env.DISABLE_HTTP_SERVER === 'true';
 
 console.log('Initializing Home Assistant connection...');
 
@@ -1267,10 +1268,14 @@ async function main() {
   // Log successful initialization
   logger.info('[server:init]', '\nServer initialization complete. Ready to handle requests.');
 
-  // Start the Express server
-  app.listen(PORT, () => {
-    logger.info('[server:init]', `Express server listening on port ${PORT}`);
-  });
+  // Start the Express server (optional - can be disabled for MCP-only mode)
+  if (!DISABLE_HTTP_SERVER) {
+    app.listen(PORT, () => {
+      logger.info('[server:init]', `Express server listening on port ${PORT}`);
+    });
+  } else {
+    logger.info('[server:init]', 'HTTP server disabled (DISABLE_HTTP_SERVER=true). Running in MCP-only mode.');
+  }
 }
 
 main().catch(console.error);
