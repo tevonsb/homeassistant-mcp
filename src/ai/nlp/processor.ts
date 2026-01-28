@@ -29,8 +29,16 @@ export class NLPProcessor {
             // Classify the intent
             const intent = await this.intentClassifier.classify(input, entities);
 
+            // Create preliminary intent for context analysis
+            const preliminaryIntent: AIIntent = {
+                action: intent.action,
+                target: entities.primary_target,
+                parameters: { ...entities.parameters, ...intent.parameters },
+                raw_input: input
+            };
+
             // Analyze context relevance
-            const contextRelevance = await this.contextAnalyzer.analyze(intent, context);
+            const contextRelevance = await this.contextAnalyzer.analyze(preliminaryIntent, context);
 
             // Calculate confidence scores
             const confidence: AIConfidence = {

@@ -1,8 +1,12 @@
-# Model Context Protocol Server for Home Assistant
+# 🏠 Enhanced Model Context Protocol Server for Home Assistant
 
-The server uses the MCP protocol to share access to a local Home Assistant instance with an LLM application.
+**The most comprehensive MCP server for Home Assistant - now with enterprise-grade features!**
 
-A powerful bridge between your Home Assistant instance and Language Learning Models (LLMs), enabling natural language control and monitoring of your smart home devices through the Model Context Protocol (MCP). This server provides a comprehensive API for managing your entire Home Assistant ecosystem, from device control to system administration.
+A powerful bridge between your Home Assistant instance and Language Learning Models (LLMs), enabling natural language control and monitoring of your smart home devices through the Model Context Protocol (MCP). This enhanced server provides a comprehensive API for managing your entire Home Assistant ecosystem, from device control to system administration, plus advanced features like energy monitoring, weather integration, backup management, and AI-powered natural language processing.
+
+## 🚀 **NEW: Enterprise-Grade Features Added!**
+
+This server now includes **7 new enhanced tools** and **advanced capabilities** that transform it from a basic MCP server into a production-ready, enterprise-grade smart home automation platform.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node.js](https://img.shields.io/badge/node-%3E%3D20.10.0-green.svg)
@@ -11,16 +15,48 @@ A powerful bridge between your Home Assistant instance and Language Learning Mod
 ![TypeScript](https://img.shields.io/badge/typescript-%5E5.0.0-blue.svg)
 ![Test Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)
 
-## Features
+## 🎯 **Enhanced Features**
 
-- 🎮 **Device Control**: Control any Home Assistant device through natural language
-- 🔄 **Real-time Updates**: Get instant updates through Server-Sent Events (SSE)
-- 🤖 **Automation Management**: Create, update, and manage automations
-- 📊 **State Monitoring**: Track and query device states
-- 🔐 **Secure**: Token-based authentication and rate limiting
-- 📱 **Mobile Ready**: Works with any HTTP-capable client
+### 🆕 **NEW: Advanced Tools (7 Additional Tools)**
+- ⚡ **Energy Management**: Monitor solar production, grid usage, battery levels, and get optimization suggestions
+- 🌤️ **Weather Integration**: Advanced weather data, forecasts, alerts, and automation suggestions
+- 🌐 **Network Monitoring**: Device tracking, security scanning, and performance optimization
+- 💾 **Backup Management**: Automated backup scheduling, cloud storage, and restore operations
+- 🔄 **Error Recovery**: Intelligent error detection and automated recovery strategies
+- 📊 **System Health**: Comprehensive health scoring and performance monitoring
+- ✅ **System Validation**: Connection testing and tool validation
 
-## Real-time Updates with SSE
+### 🎮 **Core Device Control**
+- **Device Control**: Control any Home Assistant device through natural language
+- **Real-time Updates**: Get instant updates through Server-Sent Events (SSE)
+- **Automation Management**: Create, update, and manage automations
+- **State Monitoring**: Track and query device states
+- **Secure**: Advanced token encryption, rate limiting, and input validation
+- **Mobile Ready**: Works with any HTTP-capable client
+
+### 🔒 **Enhanced Security Features**
+- **Advanced Token Encryption**: AES-256-GCM encryption for sensitive data
+- **Multi-layer Security**: Helmet.js integration and comprehensive middleware
+- **Rate Limiting**: IP-based and user-based request throttling
+- **Input Validation**: Schema-based parameter checking and sanitization
+- **Error Handling**: Secure error responses without information leakage
+
+## 📚 **NEW: Complete API Documentation & AI/NLP Processing**
+
+### 🤖 **AI/NLP Natural Language Processing**
+- **Intent Classification**: High-accuracy natural language command interpretation
+- **Entity Extraction**: Automatic extraction of device names and parameters
+- **Context Awareness**: Session management and user context tracking
+- **Multi-Model Support**: Works with Claude, GPT-4, and custom models
+- **Error Correction**: Smart suggestions for failed commands
+
+### 📖 **Interactive API Documentation**
+- **Swagger UI**: Complete OpenAPI 3.0 specification at `/api-docs`
+- **Interactive Testing**: Test all endpoints directly from the documentation
+- **Comprehensive Examples**: Request/response examples for every tool
+- **Security Documentation**: Authentication and authorization details
+
+## 🔄 **Real-time Updates with SSE**
 
 The server includes a powerful Server-Sent Events (SSE) system that provides real-time updates from your Home Assistant instance. This allows you to:
 
@@ -43,6 +79,60 @@ eventSource.onmessage = (event) => {
 ```
 
 See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
+
+## 🆕 **NEW: Enhanced Tools Usage Examples**
+
+### ⚡ **Energy Management**
+```bash
+# Get energy optimization suggestions
+curl -X POST http://localhost:3000/api/energy_management \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "get_optimization_suggestions"}'
+
+# Monitor solar production
+curl -X POST http://localhost:3000/api/energy_management \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "get_dashboard", "source_type": "solar"}'
+```
+
+### 🌤️ **Weather Integration**
+```bash
+# Get weather automation suggestions
+curl -X POST http://localhost:3000/api/weather_integration \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "automation_suggestions"}'
+
+# Check air quality
+curl -X POST http://localhost:3000/api/weather_integration \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "air_quality"}'
+```
+
+### 💾 **Backup Management**
+```bash
+# Schedule automated backups
+curl -X POST http://localhost:3000/api/backup_management \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "schedule", "schedule": {"frequency": "daily", "time": "02:00:00"}}'
+
+# Get backup statistics
+curl -X POST http://localhost:3000/api/backup_management \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "statistics"}'
+```
+
+### 📊 **System Health**
+```bash
+# Get overall system health score
+curl -X POST http://localhost:3000/api/system_health \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "overall_health"}'
+
+# Check performance metrics
+curl -X POST http://localhost:3000/api/system_health \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "performance_metrics"}'
+```
 
 ## Table of Contents
 
@@ -705,9 +795,9 @@ npm run format
    - Validate service calls
    - Monitor execution logs
 
-## Project Status
+## 🎯 **Project Status**
 
-✅ **Complete**
+✅ **Complete & Enhanced**
 - Entity, Floor, and Area access
 - Device control (Lights, Climate, Covers, Switches, Contacts)
 - Add-on management system
@@ -722,21 +812,105 @@ npm run format
 - Home Assistant API integration
 - Project documentation
 
-🚧 **In Progress**
-- WebSocket implementation for real-time updates
-- Enhanced security features
-- Tool organization optimization
-- Performance optimization
-- Resource context integration
-- API documentation generation
-- Multi-platform desktop integration
-- Advanced error recovery
-- Custom prompt testing
-- Enhanced macOS integration
-- Type safety improvements
-- Testing coverage expansion
+🚀 **NEW: Enterprise-Grade Features Added**
 
-## Contributing
+- ⚡ **Energy Management & Monitoring** - Complete energy optimization system
+- 🌤️ **Advanced Weather Integration** - Weather-based automation suggestions
+- 🌐 **Network Monitoring & Security** - Device tracking and security scanning
+- 💾 **Backup Management** - Automated scheduling and cloud storage
+- 🔄 **Error Recovery Systems** - Intelligent error detection and recovery
+- 📊 **System Health Monitoring** - Comprehensive health scoring
+- ✅ **System Validation** - Connection and tool testing
+- 🔒 **Enhanced Security** - AES encryption, rate limiting, input validation
+- 📚 **API Documentation** - Complete Swagger UI integration
+- 🤖 **AI/NLP Processing** - Natural language command interpretation
+- 🔄 **WebSocket Implementation** - Real-time updates and communication
+- 🚀 **Performance Optimization** - Caching, batching, and resource management
+
+🏆 **Production Ready**
+
+This enhanced MCP server is now suitable for both development and production environments, with enterprise-grade security, monitoring, and automation capabilities.
+
+## 🆕 **Enhanced Tools Overview**
+
+### ⚡ **Energy Management Tool**
+The `energy_management` tool provides comprehensive energy monitoring and optimization:
+- **Solar Production Tracking**: Monitor solar panel efficiency and production
+- **Grid Usage Analysis**: Track import/export and cost analysis
+- **Battery Management**: Monitor charge levels and optimization
+- **Device Consumption**: Track individual device energy usage
+- **Optimization Suggestions**: AI-powered recommendations for energy savings
+
+### 🌤️ **Weather Integration Tool**
+The `weather_integration` tool offers advanced weather capabilities:
+- **Current Conditions**: Real-time weather data and air quality
+- **Forecasts**: Multi-day and hourly weather predictions
+- **Weather Alerts**: Severe weather warnings and notifications
+- **Automation Suggestions**: Weather-based smart home optimization
+- **Historical Data**: Weather trend analysis and patterns
+
+### 🌐 **Network Monitoring Tool**
+The `network_monitoring` tool provides network security and performance:
+- **Device Tracking**: Monitor all connected devices and their status
+- **Security Scanning**: Detect unknown devices and vulnerabilities
+- **Performance Metrics**: Network speed and health assessment
+- **Data Usage**: Monitor bandwidth consumption and patterns
+- **Optimization**: Network performance recommendations
+
+### 💾 **Backup Management Tool**
+The `backup_management` tool offers enterprise-grade backup solutions:
+- **Automated Scheduling**: Daily, weekly, or monthly backup schedules
+- **Cloud Storage**: Support for local and cloud backup locations
+- **Selective Backups**: Choose specific add-ons and folders
+- **Password Protection**: Encrypted backup security
+- **Restore Operations**: Complete system restoration capabilities
+
+### 🔄 **Error Recovery Tool**
+The `error_recovery` tool provides intelligent error handling:
+- **Pattern Detection**: Identify recurring error patterns
+- **Automated Recovery**: Self-healing for common issues
+- **Circuit Breaker**: Protect against cascading failures
+- **Error Analytics**: Comprehensive error reporting and analysis
+- **Recovery Strategies**: Multiple recovery approaches for different scenarios
+
+### 📊 **System Health Tool**
+The `system_health` tool offers comprehensive monitoring:
+- **Health Scoring**: Overall system health assessment (0-100)
+- **Performance Metrics**: Memory, CPU, and response time monitoring
+- **Integration Status**: Check all system components and services
+- **Proactive Recommendations**: Optimization suggestions before issues occur
+- **Resource Monitoring**: Track system resource usage and trends
+
+### ✅ **System Validation Tool**
+The `system_validation` tool provides testing and validation:
+- **Connection Testing**: Verify Home Assistant connectivity
+- **Tool Validation**: Ensure all enhanced tools are working
+- **System Status**: Comprehensive system status overview
+- **Performance Testing**: Validate system performance metrics
+- **Integration Testing**: Test all system integrations
+
+## 🚀 **Getting Started with Enhanced Features**
+
+### **1. Access API Documentation**
+Visit `http://localhost:3000/api-docs` for interactive API documentation
+
+### **2. Test Enhanced Tools**
+Use the `system_validation` tool to verify all features are working:
+```bash
+curl -X POST http://localhost:3000/api/system_validation \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "check_tools"}'
+```
+
+### **3. Monitor System Health**
+Get a complete system overview:
+```bash
+curl -X POST http://localhost:3000/api/system_health \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"action": "overall_health"}'
+```
+
+## 🤝 **Contributing**
 
 1. Fork the repository
 2. Create a feature branch

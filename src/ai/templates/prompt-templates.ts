@@ -1,6 +1,6 @@
 import { AIModel } from '../types/index.js';
 
-interface PromptTemplate {
+export interface PromptTemplate {
     system: string;
     user: string;
     examples: Array<{
@@ -9,75 +9,46 @@ interface PromptTemplate {
     }>;
 }
 
-interface PromptVariables {
-    device_name?: string;
-    location?: string;
-    action?: string;
-    parameters?: Record<string, any>;
-    context?: Record<string, any>;
-    [key: string]: any;
-}
-
-class PromptTemplates {
+export class PromptTemplateManager {
     private templates: Record<AIModel, PromptTemplate>;
 
     constructor() {
         this.templates = {
-            [AIModel.CLAUDE]: {
-                system: `You are Claude, an AI assistant specialized in home automation control through natural language.
-Your role is to interpret user commands and translate them into specific device control actions.
-Always maintain context awareness and consider user preferences and patterns.
-Provide clear, concise responses and suggest relevant follow-up actions.`,
-                user: `Control the {device_name} in the {location} by {action} with parameters: {parameters}.
-Current context: {context}`,
+            claude: {
+                system: "You are a Home Assistant expert assistant. Convert natural language commands into structured actions for smart home devices.",
+                user: "Command: {input}\nContext: {context}\nPlease interpret this command and provide the action, target entity, and parameters.",
                 examples: [
                     {
                         user: "Turn on the living room lights",
-                        assistant: "I'll turn on the lights in the living room. Would you like me to set a specific brightness level?"
+                        assistant: "Action: turn_on\nTarget: light.living_room\nParameters: {}"
                     },
                     {
-                        user: "Set the temperature to 72 degrees",
-                        assistant: "I'll set the temperature to 72°F. I'll monitor the temperature and let you know when it reaches the target."
+                        user: "Set the thermostat to 72 degrees",
+                        assistant: "Action: set_temperature\nTarget: climate.thermostat\nParameters: {\"temperature\": 72}"
                     }
                 ]
             },
-            [AIModel.GPT4]: {
-                system: `You are a home automation assistant powered by GPT-4.
-Focus on precise command interpretation and execution.
-Maintain high accuracy in device control and parameter settings.
-Provide feedback on action success and system state changes.`,
-                user: `Command: {action} {device_name} in {location}
-Parameters: {parameters}
-Context: {context}`,
+            gpt4: {
+                system: "You are an AI assistant specialized in Home Assistant automation. Your task is to interpret natural language commands and convert them into precise device control instructions.",
+                user: "Please analyze this command: \"{input}\"\nGiven the context: {context}\nReturn the appropriate action, target device, and any required parameters in JSON format.",
                 examples: [
                     {
                         user: "Dim the bedroom lights to 50%",
-                        assistant: "Setting bedroom light brightness to 50%. The change has been applied successfully."
+                        assistant: "{\"action\": \"turn_on\", \"target\": \"light.bedroom\", \"parameters\": {\"brightness\": 128}}"
                     },
                     {
-                        user: "Start the evening routine",
-                        assistant: "Initiating evening routine: dimming lights, adjusting temperature, and enabling security system."
+                        user: "Close the garage door",
+                        assistant: "{\"action\": \"close\", \"target\": \"cover.garage_door\", \"parameters\": {}}"
                     }
                 ]
             },
-            [AIModel.CUSTOM]: {
-                system: `Custom home automation assistant configuration.
-Adapt to user preferences and patterns.
-Learn from interactions and optimize responses.
-Provide detailed feedback and suggestions.`,
-                user: `Action requested: {action}
-Target device: {device_name}
-Location: {location}
-Parameters: {parameters}
-Current context: {context}`,
+            custom: {
+                system: "Smart home command interpreter. Parse natural language into device actions.",
+                user: "Input: {input}\nContext: {context}\nOutput structured command.",
                 examples: [
                     {
-                        user: "Make it cooler in here",
-                        assistant: "Based on your preferences, I'll lower the temperature by 2 degrees. Current temperature is 74°F, adjusting to 72°F."
-                    },
-                    {
-                        user: "Set up movie mode",
-                        assistant: "Activating movie mode: dimming lights to 20%, closing blinds, setting TV input to HDMI 1, and adjusting sound system."
+                        user: "Turn off all lights",
+                        assistant: "action=turn_off;target=light.*;parameters={}"
                     }
                 ]
             }
@@ -88,48 +59,7 @@ Current context: {context}`,
         return this.templates[model];
     }
 
-    formatPrompt(model: AIModel, variables: PromptVariables): string {
-        const template = this.getTemplate(model);
-        let prompt = template.user;
-
-        // Replace variables in the prompt
-        for (const [key, value] of Object.entries(variables)) {
-            const placeholder = `{${key}}`;
-            if (typeof value === 'object') {
-                prompt = prompt.replace(placeholder, JSON.stringify(value));
-            } else {
-                prompt = prompt.replace(placeholder, String(value));
-            }
-        }
-
-        return prompt;
-    }
-
-    getSystemPrompt(model: AIModel): string {
-        return this.templates[model].system;
-    }
-
-    getExamples(model: AIModel): Array<{ user: string; assistant: string }> {
-        return this.templates[model].examples;
-    }
-
-    addExample(
-        model: AIModel,
-        example: { user: string; assistant: string }
-    ): void {
-        this.templates[model].examples.push(example);
-    }
-
-    updateSystemPrompt(model: AIModel, newPrompt: string): void {
-        this.templates[model].system = newPrompt;
-    }
-
-    createCustomTemplate(
-        model: AIModel.CUSTOM,
-        template: PromptTemplate
-    ): void {
-        this.templates[model] = template;
+    setCustomTemplate(template: PromptTemplate): void {
+        this.templates.custom = template;
     }
 }
-
-export default new PromptTemplates(); 

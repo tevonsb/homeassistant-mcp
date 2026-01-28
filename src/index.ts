@@ -6,6 +6,9 @@ import { sseManager } from './sse/index.js';
 import { ILogger } from "@digital-alchemy/core";
 import express from 'express';
 import { rateLimiter, securityHeaders, validateRequest, sanitizeInput, errorHandler } from './security/index.js';
+import { setupSwagger } from './api-docs/swagger.js';
+import { createEnhancedTools } from './tools/enhanced-tools.js';
+import aiRouter from './ai/endpoints/ai-router.js';
 
 // Load environment variables based on NODE_ENV
 const envFile = process.env.NODE_ENV === 'production'
@@ -14,7 +17,9 @@ const envFile = process.env.NODE_ENV === 'production'
     ? '.env.test'
     : '.env.development';
 
-console.log(`Loading environment from ${envFile}`);
+// Set log level to reduce Home Assistant library verbosity
+process.env.LOG_LEVEL = 'warn';
+
 config({ path: resolve(process.cwd(), envFile) });
 
 import { get_hass } from './hass/index.js';
@@ -27,8 +32,6 @@ const HASS_HOST = process.env.HASS_HOST || 'http://192.168.178.63:8123';
 const HASS_TOKEN = process.env.HASS_TOKEN;
 const PORT = process.env.PORT || 3000;
 
-console.log('Initializing Home Assistant connection...');
-
 // Initialize Express app
 const app = express();
 
@@ -38,6 +41,12 @@ app.use(rateLimiter);
 app.use(express.json());
 app.use(validateRequest);
 app.use(sanitizeInput);
+
+// Setup API documentation
+setupSwagger(app);
+
+// Setup AI/NLP routes
+app.use('/ai', aiRouter);
 
 // Initialize LiteMCP
 const server = new LiteMCP('home-assistant', '0.1.0');
@@ -1238,38 +1247,30 @@ async function main() {
   server.addTool(getSSEStatsTool);
   tools.push(getSSEStatsTool);
 
-  logger.debug('[server:init]', 'Initializing MCP Server...');
+  // Add enhanced tools
+  if (HASS_HOST && HASS_TOKEN) {
+    const enhancedTools = createEnhancedTools(HASS_HOST, HASS_TOKEN);
+    
+    enhancedTools.forEach((tool: any) => {
+      try {
+        server.addTool(tool);
+        tools.push(tool);
+      } catch (error) {
+        console.error(`Failed to add tool ${tool.name}:`, error);
+      }
+    });
+  }
 
-  // Start the server
+  // Start the server (reduced logging for MCP stdio compatibility)
   await server.start();
-  logger.info('[server:init]', `MCP Server started on port ${PORT}`);
-  logger.info('[server:init]', 'Home Assistant server running on stdio');
-  logger.info('[server:init]', 'SSE endpoints initialized');
+  
+  // Only log essential info to stderr to avoid stdio interference
+  console.error(`[server:ready] MCP Server operational with ${tools.length} tools`);
+  console.error(`[server:ready] Express server on port ${PORT}`);
 
-  // Log available endpoints using our tracked tools array
-  logger.info('[server:endpoints]', '\nAvailable API Endpoints:');
-  tools.forEach((tool: Tool) => {
-    logger.info('[server:endpoints]', `- ${tool.name}: ${tool.description}`);
-  });
-
-  // Log SSE endpoints
-  logger.info('[server:endpoints]', '\nAvailable SSE Endpoints:');
-  logger.info('[server:endpoints]', '- /subscribe_events');
-  logger.info('[server:endpoints]', '  Parameters:');
-  logger.info('[server:endpoints]', '  - token: Authentication token (required)');
-  logger.info('[server:endpoints]', '  - events: List of event types to subscribe to (optional)');
-  logger.info('[server:endpoints]', '  - entity_id: Specific entity ID to monitor (optional)');
-  logger.info('[server:endpoints]', '  - domain: Domain to monitor (e.g., "light", "switch") (optional)');
-  logger.info('[server:endpoints]', '\n- /get_sse_stats');
-  logger.info('[server:endpoints]', '  Parameters:');
-  logger.info('[server:endpoints]', '  - token: Authentication token (required)');
-
-  // Log successful initialization
-  logger.info('[server:init]', '\nServer initialization complete. Ready to handle requests.');
-
-  // Start the Express server
+  // Start the Express server  
   app.listen(PORT, () => {
-    logger.info('[server:init]', `Express server listening on port ${PORT}`);
+    console.error('[server:ready] 🚀 All systems operational');
   });
 }
 

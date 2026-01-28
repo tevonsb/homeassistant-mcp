@@ -59,7 +59,11 @@ Thumbs.db
 home-assistant.log*
 home-assistant_v2.db
 home-assistant_v2.db-*
-.
+
+# Configuration files with sensitive data
+cursor-config.json
+*.config.json
+config.local.json
 
 package-lock.json
 yarn.lock

@@ -1,135 +1,89 @@
-import { AIContext, AIIntent } from '../types/index.js';
-
-interface ContextAnalysis {
-    confidence: number;
-    relevant_params: Record<string, any>;
-}
-
-interface ContextRule {
-    condition: (context: AIContext, intent: AIIntent) => boolean;
-    relevance: number;
-    params?: (context: AIContext) => Record<string, any>;
-}
+import { AIIntent, AIContext } from '../types/index.js';
 
 export class ContextAnalyzer {
-    private contextRules: ContextRule[];
+  async analyze(intent: AIIntent, context: AIContext): Promise<{
+    confidence: number;
+    relevant_params: Record<string, any>;
+  }> {
+    const relevantParams: Record<string, any> = {};
+    let confidence = 0.5; // Base confidence
 
-    constructor() {
-        this.contextRules = [
-            // Location-based context
-            {
-                condition: (context, intent) =>
-                    Boolean(context.location && intent.target.includes(context.location.toLowerCase())),
-                relevance: 0.8,
-                params: (context) => ({ location: context.location })
-            },
-
-            // Time-based context
-            {
-                condition: (context) => {
-                    const hour = new Date(context.timestamp).getHours();
-                    return hour >= 0 && hour <= 23;
-                },
-                relevance: 0.6,
-                params: (context) => ({
-                    time_of_day: this.getTimeOfDay(new Date(context.timestamp))
-                })
-            },
-
-            // Previous action context
-            {
-                condition: (context, intent) => {
-                    const recentActions = context.previous_actions.slice(-3);
-                    return recentActions.some(action =>
-                        action.target === intent.target ||
-                        action.action === intent.action
-                    );
-                },
-                relevance: 0.7,
-                params: (context) => ({
-                    recent_action: context.previous_actions[context.previous_actions.length - 1]
-                })
-            },
-
-            // Environment state context
-            {
-                condition: (context, intent) => {
-                    return Object.keys(context.environment_state).some(key =>
-                        intent.target.includes(key) ||
-                        intent.parameters[key] !== undefined
-                    );
-                },
-                relevance: 0.9,
-                params: (context) => ({ environment: context.environment_state })
-            }
-        ];
+    // Analyze location context
+    if (context.location && intent.target) {
+      const targetLocation = this.extractLocationFromTarget(intent.target);
+      if (targetLocation && targetLocation.toLowerCase() === context.location.toLowerCase()) {
+        confidence += 0.2;
+        relevantParams.location_match = true;
+      }
     }
 
-    async analyze(intent: AIIntent, context: AIContext): Promise<ContextAnalysis> {
-        let totalConfidence = 0;
-        let relevantParams: Record<string, any> = {};
-        let applicableRules = 0;
+    // Analyze previous actions
+    if (context.previous_actions && context.previous_actions.length > 0) {
+      const recentActions = context.previous_actions.slice(-3);
+      const similarActions = recentActions.filter(action => 
+        action.action === intent.action || 
+        (action.target && intent.target && action.target.split('.')[0] === intent.target.split('.')[0])
+      );
 
-        for (const rule of this.contextRules) {
-            if (rule.condition(context, intent)) {
-                totalConfidence += rule.relevance;
-                applicableRules++;
-
-                if (rule.params) {
-                    relevantParams = {
-                        ...relevantParams,
-                        ...rule.params(context)
-                    };
-                }
-            }
-        }
-
-        // Calculate normalized confidence
-        const confidence = applicableRules > 0
-            ? totalConfidence / applicableRules
-            : 0.5; // Default confidence if no rules apply
-
-        return {
-            confidence,
-            relevant_params: relevantParams
-        };
+      if (similarActions.length > 0) {
+        confidence += 0.15;
+        relevantParams.action_pattern = true;
+      }
     }
 
-    private getTimeOfDay(date: Date): string {
-        const hour = date.getHours();
+    // Analyze environment state
+    if (context.environment_state) {
+      // Check if target device is available
+      const deviceDomain = intent.target.split('.')[0];
+      if (context.environment_state[deviceDomain]) {
+        confidence += 0.1;
+        relevantParams.device_available = true;
+      }
 
-        if (hour >= 5 && hour < 12) return 'morning';
-        if (hour >= 12 && hour < 17) return 'afternoon';
-        if (hour >= 17 && hour < 22) return 'evening';
-        return 'night';
+      // Time-based context
+      const currentHour = new Date().getHours();
+      if (intent.action === 'turn_on' && deviceDomain === 'light' && currentHour >= 18) {
+        confidence += 0.1;
+        relevantParams.evening_lighting = true;
+      } else if (intent.action === 'turn_off' && deviceDomain === 'light' && currentHour >= 22) {
+        confidence += 0.1;
+        relevantParams.night_mode = true;
+      }
     }
 
-    async updateContextRules(newRules: ContextRule[]): Promise<void> {
-        this.contextRules = [...this.contextRules, ...newRules];
+    // Analyze session continuity
+    const sessionAge = Date.now() - new Date(context.timestamp).getTime();
+    if (sessionAge < 5 * 60 * 1000) { // Within 5 minutes
+      confidence += 0.05;
+      relevantParams.session_active = true;
     }
 
-    async validateContext(context: AIContext): Promise<boolean> {
-        // Validate required context fields
-        if (!context.timestamp || !context.user_id || !context.session_id) {
-            return false;
-        }
+    // Cap confidence at 1.0
+    confidence = Math.min(confidence, 1.0);
 
-        // Validate timestamp format
-        const timestamp = new Date(context.timestamp);
-        if (isNaN(timestamp.getTime())) {
-            return false;
-        }
+    return {
+      confidence,
+      relevant_params: relevantParams,
+    };
+  }
 
-        // Validate previous actions array
-        if (!Array.isArray(context.previous_actions)) {
-            return false;
-        }
+  private extractLocationFromTarget(target: string): string | null {
+    const parts = target.split('.');
+    if (parts.length >= 2) {
+      const entityName = parts[1];
+      // Common room patterns
+      const roomPatterns = [
+        'living_room', 'bedroom', 'kitchen', 'bathroom', 'office',
+        'garage', 'basement', 'attic', 'dining_room', 'family_room',
+        'guest_room', 'master_bedroom', 'kids_room', 'study', 'hallway',
+      ];
 
-        // Validate environment state
-        if (typeof context.environment_state !== 'object' || context.environment_state === null) {
-            return false;
+      for (const room of roomPatterns) {
+        if (entityName.includes(room)) {
+          return room.replace('_', ' ');
         }
-
-        return true;
+      }
     }
-} 
+    return null;
+  }
+}

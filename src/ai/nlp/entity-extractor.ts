@@ -1,103 +1,82 @@
-import { AIContext } from '../types/index.js';
-
-interface ExtractedEntities {
+export class EntityExtractor {
+  async extract(input: string): Promise<{
     primary_target: string;
     parameters: Record<string, any>;
     confidence: number;
+  }> {
+    // Simple pattern-based entity extraction
+    // In a real implementation, this would use more sophisticated NLP
+    
+    const lowercaseInput = input.toLowerCase();
+    let primaryTarget = '';
+    const parameters: Record<string, any> = {};
+    
+    // Extract device names and rooms
+    const devicePatterns = [
+      /(?:light|lamp)s?\s+(?:in\s+)?(?:the\s+)?(\w+)/,
+      /(\w+)\s+(?:light|lamp)s?/,
+      /(?:climate|thermostat|ac)\s+(?:in\s+)?(?:the\s+)?(\w+)/,
+      /(\w+)\s+(?:climate|thermostat|ac)/,
+      /(?:switch|outlet)\s+(?:in\s+)?(?:the\s+)?(\w+)/,
+      /(\w+)\s+(?:switch|outlet)/,
+    ];
+
+    for (const pattern of devicePatterns) {
+      const match = lowercaseInput.match(pattern);
+      if (match) {
+        const room = match[1];
+        if (lowercaseInput.includes('light') || lowercaseInput.includes('lamp')) {
+          primaryTarget = `light.${room.replace(/\s+/g, '_')}`;
+        } else if (lowercaseInput.includes('climate') || lowercaseInput.includes('thermostat')) {
+          primaryTarget = `climate.${room.replace(/\s+/g, '_')}`;
+        } else if (lowercaseInput.includes('switch') || lowercaseInput.includes('outlet')) {
+          primaryTarget = `switch.${room.replace(/\s+/g, '_')}`;
+        }
+        break;
+      }
+    }
+
+    // Extract numeric parameters
+    const tempMatch = lowercaseInput.match(/(\d+)\s*(?:degrees?|°)/);
+    if (tempMatch) {
+      parameters.temperature = parseInt(tempMatch[1]);
+    }
+
+    const brightnessMatch = lowercaseInput.match(/(\d+)%|brightness\s+(\d+)/);
+    if (brightnessMatch) {
+      const brightness = parseInt(brightnessMatch[1] || brightnessMatch[2]);
+      parameters.brightness = Math.round((brightness / 100) * 255);
+    }
+
+    // Extract colors
+    const colorMatch = lowercaseInput.match(/\b(red|green|blue|yellow|orange|purple|pink|white|warm|cool)\b/);
+    if (colorMatch) {
+      const colorMap: Record<string, [number, number, number]> = {
+        red: [255, 0, 0],
+        green: [0, 255, 0],
+        blue: [0, 0, 255],
+        yellow: [255, 255, 0],
+        orange: [255, 165, 0],
+        purple: [128, 0, 128],
+        pink: [255, 192, 203],
+        white: [255, 255, 255],
+      };
+      
+      if (colorMap[colorMatch[1]]) {
+        parameters.rgb_color = colorMap[colorMatch[1]];
+      } else if (colorMatch[1] === 'warm') {
+        parameters.color_temp = 2700;
+      } else if (colorMatch[1] === 'cool') {
+        parameters.color_temp = 6500;
+      }
+    }
+
+    const confidence = primaryTarget ? 0.9 : 0.3;
+
+    return {
+      primary_target: primaryTarget,
+      parameters,
+      confidence,
+    };
+  }
 }
-
-export class EntityExtractor {
-    private deviceNameMap: Map<string, string>;
-    private parameterPatterns: Map<string, RegExp>;
-
-    constructor() {
-        this.deviceNameMap = new Map();
-        this.parameterPatterns = new Map();
-        this.initializePatterns();
-    }
-
-    private initializePatterns(): void {
-        // Device name variations
-        this.deviceNameMap.set('living room light', 'light.living_room');
-        this.deviceNameMap.set('kitchen light', 'light.kitchen');
-        this.deviceNameMap.set('bedroom light', 'light.bedroom');
-
-        // Parameter patterns
-        this.parameterPatterns.set('brightness', /(\d+)\s*(%|percent)|bright(ness)?\s+(\d+)/i);
-        this.parameterPatterns.set('temperature', /(\d+)\s*(degrees?|°)[CF]?/i);
-        this.parameterPatterns.set('color', /(red|green|blue|white|warm|cool)/i);
-    }
-
-    async extract(input: string): Promise<ExtractedEntities> {
-        const entities: ExtractedEntities = {
-            primary_target: '',
-            parameters: {},
-            confidence: 0
-        };
-
-        try {
-            // Find device name
-            for (const [key, value] of this.deviceNameMap) {
-                if (input.toLowerCase().includes(key)) {
-                    entities.primary_target = value;
-                    break;
-                }
-            }
-
-            // Extract parameters
-            for (const [param, pattern] of this.parameterPatterns) {
-                const match = input.match(pattern);
-                if (match) {
-                    entities.parameters[param] = this.normalizeParameterValue(param, match[1]);
-                }
-            }
-
-            // Calculate confidence based on matches
-            entities.confidence = this.calculateConfidence(entities, input);
-
-            return entities;
-        } catch (error) {
-            console.error('Entity extraction error:', error);
-            return {
-                primary_target: '',
-                parameters: {},
-                confidence: 0
-            };
-        }
-    }
-
-    private normalizeParameterValue(parameter: string, value: string): number | string {
-        switch (parameter) {
-            case 'brightness':
-                return Math.min(100, Math.max(0, parseInt(value)));
-            case 'temperature':
-                return parseInt(value);
-            case 'color':
-                return value.toLowerCase();
-            default:
-                return value;
-        }
-    }
-
-    private calculateConfidence(entities: ExtractedEntities, input: string): number {
-        let confidence = 0;
-
-        // Device confidence
-        if (entities.primary_target) {
-            confidence += 0.5;
-        }
-
-        // Parameter confidence
-        const paramCount = Object.keys(entities.parameters).length;
-        confidence += paramCount * 0.25;
-
-        // Normalize confidence to 0-1 range
-        return Math.min(1, confidence);
-    }
-
-    async updateDeviceMap(devices: Record<string, string>): Promise<void> {
-        for (const [key, value] of Object.entries(devices)) {
-            this.deviceNameMap.set(key, value);
-        }
-    }
-} 

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "homeassistant": {
+      "command": "node",
+      "args": [
+        "/path/to/your/homeassistant-mcp/dist/src/mcp-server.js"
+      ],
+      "env": {
+        "NODE_ENV": "development",
+        "HASS_HOST": "http://YOUR_HASS_IP:8123",
+        "HASS_TOKEN": "YOUR_LONG_LIVED_ACCESS_TOKEN",
+        "HASS_SOCKET_URL": "ws://YOUR_HASS_IP:8123/api/websocket"
+      }
+    }
+  }
+}

@@ -34,7 +34,6 @@ export class SSEManager extends EventEmitter {
 
     private constructor() {
         super();
-        console.log('Initializing SSE Manager...');
         this.startMaintenanceInterval();
     }
 
@@ -63,8 +62,10 @@ export class SSEManager extends EventEmitter {
             }
         }
 
-        // Log statistics
-        console.log(`Maintenance complete - Active clients: ${this.clients.size}`);
+        // Log statistics only when there are active clients
+        if (this.clients.size > 0) {
+            console.log(`Maintenance complete - Active clients: ${this.clients.size}`);
+        }
     }
 
     static getInstance(): SSEManager {
