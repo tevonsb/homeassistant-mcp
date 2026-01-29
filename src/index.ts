@@ -1008,7 +1008,13 @@ async function main() {
               throw new Error('Configuration is required for creating automation');
             }
 
-            const response = await fetch(`${HASS_HOST}/api/config/automation/config`, {
+            // Generate automation ID from alias if not provided
+            const automationId = params.automation_id || params.config.alias
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '_')
+              .replace(/^_|_$/g, '');
+
+            const response = await fetch(`${HASS_HOST}/api/config/automation/config/${automationId}`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${HASS_TOKEN}`,
@@ -1021,11 +1027,10 @@ async function main() {
               throw new Error(`Failed to create automation: ${response.statusText}`);
             }
 
-            const responseData = await response.json() as { automation_id: string };
             return {
               success: true,
               message: 'Successfully created automation',
-              automation_id: responseData.automation_id,
+              automation_id: automationId,
             };
           }
 
