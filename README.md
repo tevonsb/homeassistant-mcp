@@ -1,7 +1,5 @@
 # Model Context Protocol Server for Home Assistant
 
-The server uses the MCP protocol to share access to a local Home Assistant instance with an LLM application.
-
 A powerful bridge between your Home Assistant instance and Language Learning Models (LLMs), enabling natural language control and monitoring of your smart home devices through the Model Context Protocol (MCP). This server provides a comprehensive API for managing your entire Home Assistant ecosystem, from device control to system administration.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -11,7 +9,7 @@ A powerful bridge between your Home Assistant instance and Language Learning Mod
 ![TypeScript](https://img.shields.io/badge/typescript-%5E5.0.0-blue.svg)
 ![Test Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)
 
-## Features
+## 🚀 Features
 
 - 🎮 **Device Control**: Control any Home Assistant device through natural language
 - 🔄 **Real-time Updates**: Get instant updates through Server-Sent Events (SSE)
@@ -19,8 +17,10 @@ A powerful bridge between your Home Assistant instance and Language Learning Mod
 - 📊 **State Monitoring**: Track and query device states
 - 🔐 **Secure**: Token-based authentication and rate limiting
 - 📱 **Mobile Ready**: Works with any HTTP-capable client
+- 🐳 **Docker Support**: Easy deployment with containerization
+- 🧪 **Comprehensive Testing**: 95% test coverage with Jest
 
-## Real-time Updates with SSE
+## 🔄 Real-time Updates with SSE
 
 The server includes a powerful Server-Sent Events (SSE) system that provides real-time updates from your Home Assistant instance. This allows you to:
 
@@ -44,7 +44,7 @@ eventSource.onmessage = (event) => {
 
 See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
 
-## Table of Contents
+## 📋 Table of Contents
 
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
@@ -54,10 +54,6 @@ See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
 - [Configuration](#configuration)
 - [Development](#development)
 - [API Reference](#api-reference)
-  - [Device Control](#device-control)
-  - [Add-on Management](#add-on-management)
-  - [Package Management](#package-management)
-  - [Automation Management](#automation-management)
 - [Natural Language Integration](#natural-language-integration)
 - [Troubleshooting](#troubleshooting)
 - [Project Status](#project-status)
@@ -65,7 +61,7 @@ See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
 - [Resources](#resources)
 - [License](#license)
 
-## Key Features
+## 🎯 Key Features
 
 ### Core Functionality 🎮
 - **Smart Device Control**
@@ -124,7 +120,7 @@ See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
   - TypeScript type safety
   - Extensive test coverage
 
-## Prerequisites
+## 📋 Prerequisites
 
 - **Node.js** 20.10.0 or higher
 - **NPM** package manager
@@ -134,7 +130,7 @@ See [SSE_API.md](docs/SSE_API.md) for complete documentation of the SSE system.
 - **HACS** installed for package management features
 - **Supervisor** access for add-on management
 
-## Installation
+## 🚀 Installation
 
 ### Basic Setup
 
@@ -220,7 +216,7 @@ All environment variables can be configured in the `.env` file. The following va
 - `NODE_ENV`: Environment (production/development)
 - `DEBUG`: Enable debug mode (true/false)
 
-## Configuration
+## ⚙️ Configuration
 
 ### Environment Variables
 
@@ -250,27 +246,24 @@ TEST_HASS_TOKEN=test_token           # Test token
 
 To use your new Home Assistant MCP server, you can add Claude Desktop as a client. Add the following to the configuration. Note this will run the MCP within claude and does not work with the Docker method.
 
-```
+```json
 {
   "homeassistant": {
     "command": "node",
-    "args": [<path/to/your/dist/folder>]
+    "args": ["<path/to/your/dist/folder>"],
     "env": {
-      NODE_ENV=development
-      HASS_HOST=http://homeassistant.local:8123
-      HASS_TOKEN=your_home_assistant_token
-      PORT=3000
-      HASS_SOCKET_URL=ws://homeassistant.local:8123/api/websocket
-      LOG_LEVEL=debug
+      "NODE_ENV": "development",
+      "HASS_HOST": "http://homeassistant.local:8123",
+      "HASS_TOKEN": "your_home_assistant_token",
+      "PORT": "3000",
+      "HASS_SOCKET_URL": "ws://homeassistant.local:8123/api/websocket",
+      "LOG_LEVEL": "debug"
     }
   }
 }
-
 ```
 
-
-
-## API Reference
+## 📚 API Reference
 
 ### Device Control
 
@@ -647,7 +640,7 @@ async function executeAction() {
 }
 ```
 
-## Development
+## 🛠️ Development
 
 ```bash
 # Development mode with hot reload
@@ -672,7 +665,7 @@ npm run lint
 npm run format
 ```
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Common Issues
 
@@ -705,7 +698,7 @@ npm run format
    - Validate service calls
    - Monitor execution logs
 
-## Project Status
+## 📊 Project Status
 
 ✅ **Complete**
 - Entity, Floor, and Area access
@@ -736,7 +729,7 @@ npm run format
 - Type safety improvements
 - Testing coverage expansion
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -745,7 +738,7 @@ npm run format
 5. Ensure all tests pass
 6. Submit a pull request
 
-## Resources
+## 📚 Resources
 
 - [MCP Documentation](https://modelcontextprotocol.io/introduction)
 - [Home Assistant Docs](https://www.home-assistant.io)
@@ -753,6 +746,6 @@ npm run format
 - [HACS Documentation](https://hacs.xyz)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs)
 
-## License
+## 📄 License
 
 MIT License - See [LICENSE](LICENSE) file
