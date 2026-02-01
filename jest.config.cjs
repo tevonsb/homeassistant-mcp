@@ -28,7 +28,8 @@ module.exports = {
         '**/__tests__/helpers.test.ts',
         '**/__tests__/schemas/devices.test.ts',
         '**/__tests__/context/index.test.ts',
-        '**/__tests__/hass/index.test.ts'
+        '**/__tests__/hass/index.test.ts',
+        '**/__tests__/config/env-sync.test.ts'
     ],
     globals: {
         'ts-jest': {

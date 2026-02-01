@@ -264,8 +264,8 @@ export class SSEManager extends EventEmitter {
 
     private validateToken(token?: string): boolean {
         if (!token) return false;
-        // Compare with HASS_TOKEN from environment
-        return token === process.env.HASS_TOKEN;
+        // Compare with MCP_API_KEY from environment (NOT HASS_TOKEN - that's internal only)
+        return token === process.env.MCP_API_KEY;
     }
 
     // Utility methods

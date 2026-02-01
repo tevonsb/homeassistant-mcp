@@ -17,6 +17,15 @@ const envFile = process.env.NODE_ENV === 'production'
 console.log(`Loading environment from ${envFile}`);
 config({ path: resolve(process.cwd(), envFile) });
 
+// Sync env vars: support both HASS_HOST (documented) and HASS_BASE_URL (library expects)
+// Must happen before importing hass module which triggers library initialization
+if (process.env.HASS_HOST && !process.env.HASS_BASE_URL) {
+  process.env.HASS_BASE_URL = process.env.HASS_HOST;
+}
+if (process.env.HASS_BASE_URL && !process.env.HASS_HOST) {
+  process.env.HASS_HOST = process.env.HASS_BASE_URL;
+}
+
 import { get_hass } from './hass/index.js';
 import { LiteMCP } from 'litemcp';
 import { z } from 'zod';
@@ -24,8 +33,28 @@ import { DomainSchema } from './schemas.js';
 
 // Configuration
 const HASS_HOST = process.env.HASS_HOST || 'http://192.168.178.63:8123';
-const HASS_TOKEN = process.env.HASS_TOKEN;
-const PORT = process.env.PORT || 3000;
+const HASS_TOKEN = process.env.HASS_TOKEN;  // Internal: Server → Home Assistant communication
+const MCP_API_KEY = process.env.MCP_API_KEY; // External: Client → MCP Server authentication
+const PORT = process.env.PORT || 8124;
+const DISABLE_HTTP_SERVER = process.env.DISABLE_HTTP_SERVER === 'true';
+
+// Validate required environment variables
+if (!HASS_TOKEN) {
+  console.error('FATAL: HASS_TOKEN is required for Home Assistant communication');
+  console.error('Get a Long-Lived Access Token from Home Assistant: Profile → Long-Lived Access Tokens');
+  process.exit(1);
+}
+if (!MCP_API_KEY) {
+  console.error('FATAL: MCP_API_KEY is required for client authentication');
+  console.error('Generate one with: openssl rand -base64 32');
+  process.exit(1);
+}
+
+// Client authentication helper - validates MCP_API_KEY (NOT HASS_TOKEN)
+function validateClientToken(token: string | undefined): boolean {
+  if (!token || !MCP_API_KEY) return false;
+  return token === MCP_API_KEY;
+}
 
 console.log('Initializing Home Assistant connection...');
 
@@ -68,10 +97,10 @@ app.get('/list_devices', async (req, res) => {
     // Get token from Authorization header
     const token = req.headers.authorization?.replace('Bearer ', '');
 
-    if (!token || token !== HASS_TOKEN) {
+    if (!validateClientToken(token)) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized - Invalid token'
+        message: 'Unauthorized - Invalid API key'
       });
     }
 
@@ -98,10 +127,10 @@ app.post('/control', async (req, res) => {
     // Get token from Authorization header
     const token = req.headers.authorization?.replace('Bearer ', '');
 
-    if (!token || token !== HASS_TOKEN) {
+    if (!validateClientToken(token)) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized - Invalid token'
+        message: 'Unauthorized - Invalid API key'
       });
     }
 
@@ -132,10 +161,10 @@ app.get('/subscribe_events', (req, res) => {
     // Get token from query parameter
     const token = req.query.token?.toString();
 
-    if (!token || token !== HASS_TOKEN) {
+    if (!validateClientToken(token)) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized - Invalid token'
+        message: 'Unauthorized - Invalid API key'
       });
     }
 
@@ -167,10 +196,10 @@ app.get('/get_sse_stats', async (req, res) => {
     // Get token from query parameter
     const token = req.query.token?.toString();
 
-    if (!token || token !== HASS_TOKEN) {
+    if (!validateClientToken(token)) {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized - Invalid token'
+        message: 'Unauthorized - Invalid API key'
       });
     }
 
@@ -188,6 +217,112 @@ app.get('/get_sse_stats', async (req, res) => {
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+// ============================================================================
+// MCP-over-HTTP Endpoint (Streamable HTTP Transport)
+// Allows Claude Code and other HTTP-based MCP clients to connect
+// ============================================================================
+app.post('/mcp', async (req, res) => {
+  try {
+    // Authenticate using MCP_API_KEY
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!validateClientToken(token)) {
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        id: req.body?.id || null,
+        error: { code: -32000, message: 'Unauthorized - Invalid API key' }
+      });
+    }
+
+    const { jsonrpc, id, method, params } = req.body;
+
+    // Validate JSON-RPC version
+    if (jsonrpc !== '2.0') {
+      return res.status(400).json({
+        jsonrpc: '2.0',
+        id,
+        error: { code: -32600, message: 'Invalid JSON-RPC version' }
+      });
+    }
+
+    let result;
+    switch (method) {
+      case 'initialize':
+        result = {
+          protocolVersion: '2024-11-05',
+          serverInfo: { name: 'home-assistant', version: '0.1.0' },
+          capabilities: { tools: {} }
+        };
+        break;
+
+      case 'tools/list':
+        result = {
+          tools: tools.map(t => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: {
+              type: 'object',
+              properties: {},
+              // Note: Full schema conversion would require zod-to-json-schema
+              // For now, clients can discover parameters through tool execution
+            }
+          }))
+        };
+        break;
+
+      case 'tools/call':
+        const toolName = params?.name;
+        const tool = tools.find(t => t.name === toolName);
+        if (!tool) {
+          return res.status(404).json({
+            jsonrpc: '2.0',
+            id,
+            error: { code: -32601, message: `Tool not found: ${toolName}` }
+          });
+        }
+        try {
+          const toolResult = await tool.execute(params?.arguments || {});
+          result = {
+            content: [{ type: 'text', text: JSON.stringify(toolResult, null, 2) }]
+          };
+        } catch (toolError) {
+          return res.status(500).json({
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32603,
+              message: `Tool execution failed: ${toolError instanceof Error ? toolError.message : 'Unknown error'}`
+            }
+          });
+        }
+        break;
+
+      case 'notifications/initialized':
+        // Client notification that initialization is complete - acknowledge silently
+        result = {};
+        break;
+
+      default:
+        return res.status(400).json({
+          jsonrpc: '2.0',
+          id,
+          error: { code: -32601, message: `Method not found: ${method}` }
+        });
+    }
+
+    res.json({ jsonrpc: '2.0', id, result });
+  } catch (error) {
+    console.error('MCP endpoint error:', error);
+    res.status(500).json({
+      jsonrpc: '2.0',
+      id: req.body?.id || null,
+      error: {
+        code: -32603,
+        message: error instanceof Error ? error.message : 'Internal error'
+      }
     });
   }
 });
@@ -1008,7 +1143,14 @@ async function main() {
               throw new Error('Configuration is required for creating automation');
             }
 
-            const response = await fetch(`${HASS_HOST}/api/config/automation/config`, {
+            // Generate automation ID from alias if not provided
+            // HA API requires the ID in the URL path
+            const automationId = params.automation_id || params.config.alias
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '_')
+              .replace(/^_|_$/g, '');
+
+            const response = await fetch(`${HASS_HOST}/api/config/automation/config/${automationId}`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${HASS_TOKEN}`,
@@ -1021,11 +1163,11 @@ async function main() {
               throw new Error(`Failed to create automation: ${response.statusText}`);
             }
 
-            const responseData = await response.json() as { automation_id: string };
+            // HA API only returns {"result": "ok"}, not the automation_id
             return {
               success: true,
               message: 'Successfully created automation',
-              automation_id: responseData.automation_id,
+              automation_id: automationId,
             };
           }
 
@@ -1034,8 +1176,9 @@ async function main() {
               throw new Error('Automation ID and configuration are required for updating automation');
             }
 
+            // HA API uses POST for both create and update
             const response = await fetch(`${HASS_HOST}/api/config/automation/config/${params.automation_id}`, {
-              method: 'PUT',
+              method: 'POST',
               headers: {
                 Authorization: `Bearer ${HASS_TOKEN}`,
                 'Content-Type': 'application/json',
@@ -1047,10 +1190,10 @@ async function main() {
               throw new Error(`Failed to update automation: ${response.statusText}`);
             }
 
-            const responseData = await response.json() as { automation_id: string };
+            // HA API only returns {"result": "ok"}, not the automation_id
             return {
               success: true,
-              automation_id: responseData.automation_id,
+              automation_id: params.automation_id,
               message: 'Automation updated successfully'
             };
           }
@@ -1098,8 +1241,14 @@ async function main() {
             const config = await getResponse.json() as AutomationConfig;
             config.alias = `${config.alias} (Copy)`;
 
+            // Generate new automation ID from the new alias
+            const newAutomationId = config.alias
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '_')
+              .replace(/^_|_$/g, '');
+
             // Create new automation with modified config
-            const createResponse = await fetch(`${HASS_HOST}/api/config/automation/config`, {
+            const createResponse = await fetch(`${HASS_HOST}/api/config/automation/config/${newAutomationId}`, {
               method: 'POST',
               headers: {
                 Authorization: `Bearer ${HASS_TOKEN}`,
@@ -1112,11 +1261,11 @@ async function main() {
               throw new Error(`Failed to create duplicate automation: ${createResponse.statusText}`);
             }
 
-            const newAutomation = await createResponse.json() as AutomationResponse;
+            // HA API only returns {"result": "ok"}, not the automation_id
             return {
               success: true,
               message: `Successfully duplicated automation ${params.automation_id}`,
-              new_automation_id: newAutomation.automation_id,
+              new_automation_id: newAutomationId,
             };
           }
         }
@@ -1267,10 +1416,14 @@ async function main() {
   // Log successful initialization
   logger.info('[server:init]', '\nServer initialization complete. Ready to handle requests.');
 
-  // Start the Express server
-  app.listen(PORT, () => {
-    logger.info('[server:init]', `Express server listening on port ${PORT}`);
-  });
+  // Start the Express server (optional - can be disabled for MCP-only mode)
+  if (!DISABLE_HTTP_SERVER) {
+    app.listen(PORT, () => {
+      logger.info('[server:init]', `Express server listening on port ${PORT}`);
+    });
+  } else {
+    logger.info('[server:init]', 'HTTP server disabled (DISABLE_HTTP_SERVER=true). Running in MCP-only mode.');
+  }
 }
 
 main().catch(console.error);

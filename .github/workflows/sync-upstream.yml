@@ -1,0 +1,59 @@
+name: Sync from Upstream
+
+on:
+  schedule:
+    # Run daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/tevonsb/homeassistant-mcp.git || true
+          git fetch upstream
+
+      - name: Sync main branch
+        run: |
+          git checkout main
+
+          # Check if there are upstream changes
+          UPSTREAM_COMMITS=$(git rev-list HEAD..upstream/main --count)
+
+          if [ "$UPSTREAM_COMMITS" -gt 0 ]; then
+            echo "Found $UPSTREAM_COMMITS new commits from upstream"
+
+            # Merge upstream changes
+            git merge upstream/main --no-edit -m "chore: sync from upstream tevonsb/homeassistant-mcp"
+
+            # Push to origin
+            git push origin main
+
+            echo "Successfully synced $UPSTREAM_COMMITS commits from upstream"
+          else
+            echo "Already up to date with upstream"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Upstream: https://github.com/tevonsb/homeassistant-mcp" >> $GITHUB_STEP_SUMMARY
+          echo "- Last sync: $(date -u)" >> $GITHUB_STEP_SUMMARY
