@@ -11,6 +11,10 @@ A powerful bridge between your Home Assistant instance and Language Learning Mod
 ![TypeScript](https://img.shields.io/badge/typescript-%5E5.0.0-blue.svg)
 ![Test Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/tevonsb-homeassistant-mcp).
+
 ## Features
 
 - 🎮 **Device Control**: Control any Home Assistant device through natural language
